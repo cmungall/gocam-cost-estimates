@@ -4,6 +4,8 @@ Estimate how much **curation effort** goes into [GO-CAM](https://geneontology.or
 models, from the public `geneontology/noctua-models` git history — backed by a
 reusable **DuckDB triple-store-over-time**.
 
+📊 **Report (GitHub Pages):** https://cmungall.github.io/gocam-cost-estimates/
+
 See [SPEC.md](SPEC.md) for the design and validated data facts.
 
 ## How it works
