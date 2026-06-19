@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GO-CAM curation cost estimates</title>
+<style>
+  body { font: 16px/1.55 -apple-system, system-ui, sans-serif; max-width: 920px;
+         margin: 2rem auto; padding: 0 1rem; color: #222; }
+  h1 { margin-bottom: .2rem; } .sub { color: #666; margin-top: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 14px; }
+  th, td { border: 1px solid #ddd; padding: 6px 9px; text-align: left; }
+  th { background: #f5f7fa; } code { font-size: 12px; }
+  img { max-width: 100%; border: 1px solid #eee; border-radius: 6px; }
+  .stat { display: inline-block; margin-right: 2rem; }
+  .stat b { font-size: 1.6rem; display: block; }
+  .note { background: #fbf7e9; border-left: 4px solid #e0c060; padding: .6rem 1rem;
+           border-radius: 4px; font-size: 14px; }
+</style></head><body>
+<h1>GO-CAM curation cost estimates</h1>
+<p class="sub">Derived from <code>geneontology/noctua-models</code> git history (last 2 years).</p>
+
+<p>
+  <span class="stat"><b>4,515</b> native GO-CAMs</span>
+  <span class="stat"><b>25,832</b> save events</span>
+  <span class="stat"><b>~3,480</b> person-hours (adjusted, lower bound)</span>
+</p>
+
+<p>The minerva→GitHub bot commits every ~5&nbsp;minutes, so each commit touching a
+model is a <b>save event at ~5-min resolution</b>. Save events are grouped into
+sessions; <b>active editing time</b> is measured as save-to-save spans within a
+session — a lower bound that excludes literature reading and planning done outside
+Noctua. <b>Edit size</b> is triples added/removed per save, from a DuckDB
+triple-store-over-time.</p>
+
+<h2>How long does a GO-CAM take to curate?</h2>
+<table><thead><tr><th>Cohort</th><th>Models</th><th>Active time, median<br>(measured / adjusted)</th><th>Active time, mean<br>(measured / adjusted)</th><th>Sessions</th><th>Active days</th><th>Span</th><th>Triples</th></tr></thead><tbody><tr><td>All recent native GO-CAMs</td><td>4,515</td><td>0 / 10 min</td><td>34 / 46 min</td><td>1</td><td>1</td><td>0 d</td><td>350</td></tr><tr><td>Multi-save (≥2 commits)</td><td>2,698</td><td>15 / 30 min</td><td>57 / 74 min</td><td>2</td><td>2</td><td>14 d</td><td>410</td></tr><tr><td>Substantial (≥5 commits)</td><td>1,269</td><td>65 / 80 min</td><td>111 / 138 min</td><td>4</td><td>3</td><td>57 d</td><td>555</td></tr></tbody></table>
+<img src="curation_time.png" alt="distribution of curation time">
+
+<h2>Edit-pattern gallery</h2>
+<p>Representative models. Green = triples added, red = removed, line = total model size.</p>
+<img src="gallery.png" alt="edit-pattern gallery">
+<h3>Selected examples</h3>
+<table><thead><tr><th>Pattern</th><th>Title</th><th>Saves</th><th>Churn</th><th>Active</th><th>Span</th><th>Model</th></tr></thead><tbody><tr><td><code>blitz</code></td><td>Copy of amino acid activation (GO:0043038) for tRNA Gly,Cys,</td><td>5</td><td>9084</td><td>35 min</td><td>0 d</td><td><code>682fbcd000000787</code></td></tr><tr><td><code>blitz</code></td><td>Copy of acetyl-CoA biosynthetic process from pyruvate (GO:00</td><td>5</td><td>6156</td><td>85 min</td><td>0 d</td><td><code>678073a900002175</code></td></tr><tr><td><code>revisit_burst</code></td><td>clathrin-dependent endocytosis (GO:0072583)</td><td>160</td><td>65688</td><td>1150 min</td><td>182 d</td><td><code>6918f23700004722</code></td></tr><tr><td><code>revisit_burst</code></td><td>mating projection formation (GO:0031382), mating projection </td><td>121</td><td>32560</td><td>715 min</td><td>162 d</td><td><code>693b3c0900004140</code></td></tr><tr><td><code>slow_burn</code></td><td>Enpp1 mouse</td><td>4</td><td>16371</td><td>0 min</td><td>630 d</td><td><code>60ad85f700002009</code></td></tr><tr><td><code>slow_burn</code></td><td>Wnk4 mouse 1</td><td>7</td><td>11061</td><td>30 min</td><td>506 d</td><td><code>62183af000000355</code></td></tr><tr><td><code>stub</code></td><td>Canonical Wnt from seeding</td><td>1</td><td>15586</td><td>0 min</td><td>0 d</td><td><code>5667fdd400000892</code></td></tr><tr><td><code>stub</code></td><td>canonical Wnt signaling seeded from GO annotations March 201</td><td>1</td><td>11135</td><td>0 min</td><td>0 d</td><td><code>56d1143000001737</code></td></tr></tbody></table>
+
+<p class="note"><b>Caveats.</b> True native GO-CAMs only (gene-centric/import models
+excluded). Bulk pipeline commits dropped. Saves within one 5-min window collapse.
+Active time is a lower bound on real effort.</p>
+</body></html>

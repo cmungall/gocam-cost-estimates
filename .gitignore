@@ -1,0 +1,12 @@
+# cloned source data (reproducible via `just refresh`)
+/vendor/
+# large built triple store (reproducible via `just build-db`); only derived parquet is committed
+/data/triples.duckdb
+/data/*.duckdb.wal
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+.DS_Store
