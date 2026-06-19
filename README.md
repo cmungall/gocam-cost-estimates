@@ -35,7 +35,9 @@ rebuildable; small derived parquet under `data/`, the generated notebook, and
 
 ## Scope
 
-Counts cover **production** native GO-CAMs edited in the last 2 years (~3,325;
-~2,100 with real multi-edit curation — matching
-[go-cam-browser](https://go-cam-browser.geneontology.org/)). Gene-centric/import
-models and non-production states (deleted/development/test) are excluded.
+The model universe is the canonical **True GO-CAM** set (**2,099**) as defined by
+the GO production pipeline ([gocam-py](https://github.com/geneontology/gocam-py)
+`filter_true_gocam_models`: production status + connected causal activity graph +
+evidence) and published as the [go-cam-browser](https://go-cam-browser.geneontology.org/)
+`data.json`. Curation **time** is measured for the ~1,185 True GO-CAMs with ≥2
+individual (non-bulk) saves in the last 2 years.

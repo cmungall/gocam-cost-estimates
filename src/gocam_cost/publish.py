@@ -25,12 +25,13 @@ def _b64(df: pd.DataFrame) -> str:
 
 def generate(out: Path = NOTEBOOK) -> Path:
     cm = pd.read_parquet(C.DATA / "curation_metrics.parquet")
-    cm = cm[cm.state == "production"].copy()
+    cm = cm[cm.is_true_gocam].copy()
     cm["pattern"] = patterns.classify(cm)
     cm["title"] = cm["title"].fillna("")
-    keep = ["model_id", "title", "pattern", "n_saves", "n_active_days",
-            "calendar_span_days", "sessions_60m", "active_min_60m", "adj_min_60m",
-            "max_triples", "total_churn", "total_added", "total_removed", "first", "last"]
+    keep = ["model_id", "title", "pattern", "taxon", "n_activities", "n_saves",
+            "n_active_days", "calendar_span_days", "sessions_60m", "active_min_60m",
+            "adj_min_60m", "max_triples", "total_churn", "total_added", "total_removed",
+            "first", "last"]
     cm = cm[keep]
 
     v = pd.read_parquet(C.DATA / "versions.parquet")
@@ -40,8 +41,8 @@ def generate(out: Path = NOTEBOOK) -> Path:
     nb = (_TEMPLATE
           .replace("__MODELS_B64__", _b64(cm))
           .replace("__VERSIONS_B64__", _b64(v))
-          .replace("__N_MODELS__", str(len(cm)))
-          .replace("__N_VERSIONS__", str(len(v))))
+          .replace("__N_IN_DATA__", f"{len(cm):,}")
+          .replace("__N_MEAS__", f"{int((cm.n_saves >= 2).sum()):,}"))
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(nb)
     return out
@@ -84,13 +85,15 @@ def _(mo):
         ~5-min resolution**. We measure **edit size** as triples added/removed per
         save (from a DuckDB triple-store-over-time).
 
-        Scope: **production** native GO-CAMs. Of ~3,325 production models touched
-        in the last 2 years, the headline cohort is the **~2,100 with ≥2 in-window
-        saves** — these are the ones whose hands-on time we can actually measure
-        (≈ the [go-cam-browser](https://go-cam-browser.geneontology.org/) count).
-        The rest changed in only one ~5-min commit window (built in a single
-        operation, or curated mostly before the 2-year window), so their time
-        can't be measured.
+        **Scope = canonical *True GO-CAMs*.** The GO production pipeline
+        ([gocam-py](https://github.com/geneontology/gocam-py) `filter_true_gocam_models`)
+        defines a True GO-CAM as a **production** model whose activities form a
+        **connected causal graph** with evidence — the
+        [go-cam-browser](https://go-cam-browser.geneontology.org/) set of **2,099**
+        models. (This is a *causal-structure* test, not an edit-count one — a
+        model can be a True GO-CAM with a single save.) Of these, **__N_IN_DATA__**
+        show individual curation activity in the last 2 years, and **__N_MEAS__** have
+        ≥2 non-bulk saves, which is what lets us measure hands-on time.
 
         *Active editing time is a lower bound — it excludes literature reading and
         planning done outside Noctua.*
@@ -109,23 +112,23 @@ def _(MODELS, mo, pd):
             "sessions (median)": round(d.sessions_60m.median(), 1),
             "active days (median)": round(d.n_active_days.median(), 1),
             "span days (median)": round(d.calendar_span_days.median(), 1),
-            "triples (median)": round(d.max_triples.median(), 1),
+            "activities (median)": round(d.n_activities.median(), 1),
         }
     summary = pd.DataFrame({
-        "actively curated (≥2 saves)": _summ(MODELS[MODELS.n_saves >= 2]),
+        "measurable (≥2 saves)": _summ(MODELS[MODELS.n_saves >= 2]),
         "substantial (≥5 saves)": _summ(MODELS[MODELS.n_saves >= 5]),
-        "all production touched (incl. single-edit)": _summ(MODELS),
+        "all with in-window curation": _summ(MODELS),
     }).T
     n2 = int((MODELS.n_saves >= 2).sum())
     n1 = int((MODELS.n_saves == 1).sum())
     mo.vstack([
-        mo.md("## How long does a GO-CAM take to curate?"),
+        mo.md("## How long does a True GO-CAM take to curate?"),
         mo.ui.table(summary, selection=None),
         mo.md(
-            f"*Headline = the **{n2:,}** production models with ≥2 in-window saves. "
-            f"The other **{n1:,}** changed in a single ~5-min commit window "
-            f"(single-operation build, or curated before the window) — real models, "
-            f"but their hands-on time is not measurable here, so they sit at 0 min.*"
+            f"*Headline = the **{n2:,}** True GO-CAMs with ≥2 non-bulk saves "
+            f"(measurable hands-on time). Another **{n1:,}** had a single in-window "
+            f"save — built in one operation or curated mostly before the 2-year "
+            f"window — so they're in the universe but not timeable here.*"
         ),
     ])
     return
@@ -138,9 +141,9 @@ def _(MODELS, mo, plt):
     ax_h.hist(multi.adj_min_60m.clip(upper=240), bins=40, color="#2a6f97")
     ax_h.set_xlabel("adjusted active editing time per model (min, capped 240)")
     ax_h.set_ylabel("models")
-    ax_h.set_title(f"Curation time per actively-curated GO-CAM (n={len(multi):,})")
+    ax_h.set_title(f"Active editing time per True GO-CAM, ≥2 saves (n={len(multi):,})")
     fig_h.tight_layout()
-    mo.vstack([mo.md("Distribution across the {:,} production models with ≥2 saves:".format(len(multi))), fig_h])
+    mo.vstack([mo.md("Distribution across the {:,} measurable True GO-CAMs (≥2 saves):".format(len(multi))), fig_h])
     return
 
 
@@ -174,11 +177,11 @@ def _(MODELS, min_saves, mo, pattern, search):
         d = d[d.title.str.contains(search.value, case=False, na=False)]
     if pattern.value != "(any)":
         d = d[d.pattern == pattern.value]
-    cols = ["model_id", "title", "pattern", "n_saves", "active_min_60m",
-            "total_churn", "max_triples", "calendar_span_days"]
+    cols = ["model_id", "title", "taxon", "pattern", "n_activities", "n_saves",
+            "active_min_60m", "total_churn", "calendar_span_days"]
     table = mo.ui.table(
         d[cols].sort_values("total_churn", ascending=False),
-        selection="single", page_size=12, label=f"{len(d):,} models")
+        selection="single", page_size=12, label=f"{len(d):,} True GO-CAMs")
     table
     return (table,)
 

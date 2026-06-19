@@ -37,6 +37,8 @@ def build(concurrency: int = 32, skip_fetch: bool = False) -> None:
     typer.echo(f"      {total:,} raw triples")
     typer.echo("[5/5] building DuckDB (skolemize + diff in SQL) ...")
     db.build(versions, RAW_DIR)
+    from . import true_gocams
+    true_gocams.fetch_index(force=True)  # refresh canonical True GO-CAM index
     export()
 
 

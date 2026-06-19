@@ -76,24 +76,32 @@ def compute(db_path: Path = C.DUCKDB_PATH) -> pd.DataFrame:
         for gd in C.DAY_GAPS:
             row[f"campaigns_{gd}d"] = _campaigns(days, gd)
         rows.append(row)
-    return pd.DataFrame(rows).merge(meta, on="model_id", how="left")
+
+    from .true_gocams import fetch_index
+    idx = fetch_index()
+    df = pd.DataFrame(rows).merge(meta, on="model_id", how="left")
+    df["is_true_gocam"] = df.model_id.isin(set(idx.model_id))
+    return df.merge(idx[["model_id", "n_activities", "taxon", "longest_path"]],
+                    on="model_id", how="left")
 
 
 def cohort_summary(df: pd.DataFrame) -> pd.DataFrame:
-    """Headline medians/means for the standard cohorts (production models only).
+    """Headline medians/means over the canonical **True GO-CAM** set.
 
-    Models in non-production states (delete/development/internal_test/review/
-    template) are excluded — they are not real, published GO-CAMs.
+    A True GO-CAM is defined by the GO production pipeline (production status +
+    connected causal activity graph + evidence); we flag membership against the
+    published go-cam-browser index. Curation time is only measurable for those
+    with >=2 individual (non-bulk) saves in the window.
     """
-    prod = df[df.state == "production"]
+    tg = df[df.is_true_gocam]
     cohorts = {
-        "production_active_>=2saves": prod[prod.n_saves >= 2],   # headline (≈ go-cam-browser)
-        "production_substantial_>=5": prod[prod.n_saves >= 5],
-        "production_all_touched": prod,                          # incl. single in-window edit
+        "true_gocam_measurable_>=2saves": tg[tg.n_saves >= 2],   # headline
+        "true_gocam_substantial_>=5": tg[tg.n_saves >= 5],
+        "true_gocam_with_curation": tg,                          # incl. single in-window edit
     }
     metrics = ["n_saves", "n_active_days", "calendar_span_days",
                "active_min_60m", "adj_min_60m", "sessions_60m",
-               "max_triples", "total_churn"]
+               "n_activities", "total_churn"]
     out = []
     for name, c in cohorts.items():
         rec = {"cohort": name, "n_models": len(c)}

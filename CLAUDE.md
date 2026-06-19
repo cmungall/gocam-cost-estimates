@@ -25,8 +25,10 @@ The minerva→GitHub bot commits every **~5 minutes**, so each commit touching
 - `extract.py` — pyoxigraph (Rust) parses each version → raw-triple Parquet.
 - `db.py` — DuckDB: **skolemize** OWL-axiom blank nodes and **diff** consecutive
   versions, all in SQL (never per-triple Python loops).
-- `metrics.py` — sessions/campaigns + cohort summary (**production only**).
-- `patterns.py` — classify edit patterns; pick representatives (production, non-copy).
+- `metrics.py` — sessions/campaigns + cohort summary (**True GO-CAMs only**).
+- `patterns.py` — classify edit patterns; pick representatives (True GO-CAMs).
+- `true_gocams.py` — fetch/cache the canonical True GO-CAM index (the
+  go-cam-browser `data.json`) → `data/true_gocam_index.parquet`.
 - `publish.py` — generate the self-contained interactive marimo notebook.
 - `cli.py` — `gocam-cost {build,export,publish,docs,stats}`.
 
@@ -40,10 +42,18 @@ template in `publish.py` and re-run `gocam-cost publish` / `just docs`.
 
 - **True GO-CAMs only**: model ids `^[0-9a-f]{16}$`. Gene-centric/import models
   (`MGI_*`, `ZFIN_*`, `SGD_*`, `WB_*`, `SYNGO_*`, `YeastPathways_*`, `R-*`) are excluded.
-- **Production state only** for reported cohorts: derive `lego:modelstate` from the
-  latest version's triples and keep `production`; this drops deleted/development/
-  internal_test/review/template models (~3,325 production vs ~4,515 any-state).
-  Production + ≥2 saves ≈ 2,100, matching go-cam-browser's count.
+- **Canonical "True GO-CAM" set, not heuristics.** The GO production pipeline
+  (`gocam-py` `pipeline/filter_true_gocam_models.py`) defines a True GO-CAM as a
+  `production` model whose activities form a **connected causal graph** with
+  evidence — a *causal-structure* test, NOT edit-count or id-regex. The filtered
+  set (**2,099**) is published as the go-cam-browser bulk `data.json`; we fetch
+  that as the authoritative universe (`true_gocams.py`) and flag `is_true_gocam`
+  by membership. Don't reinvent the filter. (Earlier heuristics — hex16 ids,
+  `production` state, ≥2 saves — were wrong both ways: they included ~1,989
+  pseudo-GO-CAMs and excluded 151 non-hex True GO-CAMs like `YeastPathways_*`.)
+- Curation **time** is only measurable for True GO-CAMs with ≥2 individual
+  (non-bulk) saves in the window (~1,185 of the 2,099); the rest were touched
+  only by bulk/import pipelines in-window or curated before it.
 - **Bulk commits dropped**: a commit touching > 10 models is a pipeline re-save
   (some re-save all 54,598 models); these are not curation.
 - **Resolution floor**: saves within one 5-min window collapse into one commit.

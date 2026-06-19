@@ -25,12 +25,13 @@ reusable **DuckDB triple-store-over-time**.
 - **Window**: last 2 years (commits since **2024-06-19**).
 - **Bulk commits dropped**: a commit touching > 10 models is a pipeline/migration
   re-save, not curation (49–100 such commits, one re-saving all 54,598 models).
-- **Production state only** for *reported* cohorts: `lego:modelstate` is read
-  from the latest version's triples; deleted/development/internal_test/review/
-  template models are excluded (~3,325 production vs ~4,515 any-state edited
-  in-window; production + ≥2 saves ≈ 2,100, matching go-cam-browser).
-- **Triple DB scope**: in-window native cohort — ~4,515 models, ~25,833 versions
-  (the triple store keeps all states; the production filter is applied at report time).
+- **Canonical True GO-CAM set** for *reported* cohorts (`true_gocams.py`): the GO
+  pipeline's `filter_true_gocam_models` definition (production + connected causal
+  graph + evidence), fetched from the go-cam-browser `data.json` (**2,099**). We
+  flag `is_true_gocam` by membership rather than reverse-engineering the filter;
+  curation time is measurable for the ~1,185 with ≥2 non-bulk in-window saves.
+- **Triple DB scope**: in-window native-hex cohort — ~4,515 models, ~25,833
+  versions (a superset; the True GO-CAM filter is applied at report time).
 - **Storage**: snapshot-per-version (every triple of every version); diffs and
   counts derived in SQL.
 
