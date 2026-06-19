@@ -47,7 +47,7 @@ def compute(db_path: Path = C.DUCKDB_PATH) -> pd.DataFrame:
                n_triples
         FROM versions ORDER BY model_id, commit_time
     """).fetchdf()
-    titles = con.execute("SELECT model_id, title FROM models").fetchdf()
+    meta = con.execute("SELECT model_id, title, state FROM models").fetchdf()
     con.close()
 
     rows = []
@@ -76,15 +76,20 @@ def compute(db_path: Path = C.DUCKDB_PATH) -> pd.DataFrame:
         for gd in C.DAY_GAPS:
             row[f"campaigns_{gd}d"] = _campaigns(days, gd)
         rows.append(row)
-    return pd.DataFrame(rows).merge(titles, on="model_id", how="left")
+    return pd.DataFrame(rows).merge(meta, on="model_id", how="left")
 
 
 def cohort_summary(df: pd.DataFrame) -> pd.DataFrame:
-    """Headline medians/means for the standard cohorts."""
+    """Headline medians/means for the standard cohorts (production models only).
+
+    Models in non-production states (delete/development/internal_test/review/
+    template) are excluded — they are not real, published GO-CAMs.
+    """
+    prod = df[df.state == "production"]
     cohorts = {
-        "all_recent_native": df,
-        "multi_save_>=2": df[df.n_saves >= 2],
-        "substantial_>=5": df[df.n_saves >= 5],
+        "production": prod,
+        "production_multi_save_>=2": prod[prod.n_saves >= 2],
+        "production_substantial_>=5": prod[prod.n_saves >= 5],
     }
     metrics = ["n_saves", "n_active_days", "calendar_span_days",
                "active_min_60m", "adj_min_60m", "sessions_60m",

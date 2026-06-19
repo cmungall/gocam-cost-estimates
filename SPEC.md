@@ -25,7 +25,12 @@ reusable **DuckDB triple-store-over-time**.
 - **Window**: last 2 years (commits since **2024-06-19**).
 - **Bulk commits dropped**: a commit touching > 10 models is a pipeline/migration
   re-save, not curation (49–100 such commits, one re-saving all 54,598 models).
-- **Triple DB scope**: in-window native cohort — ~4,515 models, ~25,833 versions.
+- **Production state only** for *reported* cohorts: `lego:modelstate` is read
+  from the latest version's triples; deleted/development/internal_test/review/
+  template models are excluded (~3,325 production vs ~4,515 any-state edited
+  in-window; production + ≥2 saves ≈ 2,100, matching go-cam-browser).
+- **Triple DB scope**: in-window native cohort — ~4,515 models, ~25,833 versions
+  (the triple store keeps all states; the production filter is applied at report time).
 - **Storage**: snapshot-per-version (every triple of every version); diffs and
   counts derived in SQL.
 
@@ -62,21 +67,26 @@ Per model, group save events into **sessions** (wall-clock gap) and **campaigns*
 - sessions at 30 / 60 min gaps → measured active editing time (lower bound);
   adjusted = measured + one 5-min sync interval per session.
 - campaigns at 1 / 7 / 30 day gaps → calendar spread.
-Cohorts: all recent native; multi-save (≥2 commits); substantial (≥5 commits).
+Cohorts (production only): all production; ≥2 saves (real curation); ≥5 saves
+(substantial).
 
-## Notebook (marimo, `notebooks/cost_estimates.py`)
+## Notebook & docs (interactive WASM, `notebooks/cost_estimates.py`)
 
-- **Curation-time summary**: headline tables + distribution.
-- **Examples-only gallery**: for representative pattern models, a timeline —
-  x = commit time, stem height/area = **triples added+removed** at that save
-  (green added / red removed), overlaid cumulative-triple line. Patterns:
-  one-sitting blitz, slow burn, revisit bursts, stub.
+`publish.py` generates a **self-contained** marimo notebook (production data
+embedded as gzip+base64 CSV, inline plots, no `gocam_cost` import). `just docs`
+exports it to an interactive **WASM site** under `docs/` (runs in-browser via
+Pyodide on GitHub Pages). Contents:
+- **Curation-time summary**: cohort medians/means + distribution.
+- **Interactive explorer**: a filterable model table (search / min-saves / pattern);
+  clicking a row renders that model's edit timeline (x = commit time, green =
+  triples added, red = removed, line = total size).
 
 ## Reproducibility
 
-Committed (small): `data/curation_metrics.parquet`, `data/versions.parquet`,
-`data/example_triples.parquet`. Gitignored (rebuildable): `vendor/` clone,
-`data/triples.duckdb`. `just build-db` rebuilds; `just refresh` re-clones.
+Committed (small): `data/curation_metrics.parquet`, `data/versions.parquet`, and
+the generated `notebooks/cost_estimates.py` + `docs/`. Gitignored (rebuildable):
+`vendor/` clone, `data/triples.duckdb`. `just build` rebuilds; `just refresh`
+re-clones; `just docs` re-publishes the site.
 
 ## Out of scope (YAGNI)
 

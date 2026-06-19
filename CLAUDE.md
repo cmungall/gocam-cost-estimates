@@ -25,17 +25,25 @@ The minerva→GitHub bot commits every **~5 minutes**, so each commit touching
 - `extract.py` — pyoxigraph (Rust) parses each version → raw-triple Parquet.
 - `db.py` — DuckDB: **skolemize** OWL-axiom blank nodes and **diff** consecutive
   versions, all in SQL (never per-triple Python loops).
-- `metrics.py` — sessions/campaigns + cohort summary.
-- `patterns.py` — classify edit patterns, pick gallery representatives.
-- `viz.py` — `plot_gallery()` (matplotlib) for the examples-only gallery.
-- `cli.py` — `gocam-cost {build,export,stats}`.
+- `metrics.py` — sessions/campaigns + cohort summary (**production only**).
+- `patterns.py` — classify edit patterns; pick representatives (production, non-copy).
+- `publish.py` — generate the self-contained interactive marimo notebook.
+- `cli.py` — `gocam-cost {build,export,publish,docs,stats}`.
 
-`notebooks/cost_estimates.py` — marimo report.
+`notebooks/cost_estimates.py` — **generated** by `publish.py`; self-contained
+(embeds production data as gzip+base64 CSV, inline plots, no `gocam_cost` import)
+so `just docs` can export it to an interactive **WASM site** under `docs/` that
+runs in-browser via Pyodide on GitHub Pages. Don't hand-edit it — edit the
+template in `publish.py` and re-run `gocam-cost publish` / `just docs`.
 
 ## Key facts / gotchas
 
 - **True GO-CAMs only**: model ids `^[0-9a-f]{16}$`. Gene-centric/import models
   (`MGI_*`, `ZFIN_*`, `SGD_*`, `WB_*`, `SYNGO_*`, `YeastPathways_*`, `R-*`) are excluded.
+- **Production state only** for reported cohorts: derive `lego:modelstate` from the
+  latest version's triples and keep `production`; this drops deleted/development/
+  internal_test/review/template models (~3,325 production vs ~4,515 any-state).
+  Production + ≥2 saves ≈ 2,100, matching go-cam-browser's count.
 - **Bulk commits dropped**: a commit touching > 10 models is a pipeline re-save
   (some re-save all 54,598 models); these are not curation.
 - **Resolution floor**: saves within one 5-min window collapse into one commit.

@@ -17,11 +17,15 @@ refresh:
     rm -rf vendor/noctua-models
     uv run gocam-cost build
 
-# Generate the static HTML report under docs/ (GitHub Pages)
+# Regenerate the self-contained interactive notebook (embeds production data)
+publish:
+    uv run gocam-cost publish
+
+# Publish the interactive notebook to docs/ as a WASM site (GitHub Pages)
 docs:
     uv run gocam-cost docs
 
-# Launch the marimo notebook
+# Edit/run the interactive marimo notebook locally
 notebook:
     uv run marimo edit notebooks/cost_estimates.py
 

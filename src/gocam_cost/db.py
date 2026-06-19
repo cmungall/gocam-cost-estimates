@@ -18,6 +18,7 @@ from .gitdata import Version
 
 MODEL_IRI = "http://model.geneontology.org/"
 TITLE_PRED = "http://purl.org/dc/elements/1.1/title"
+STATE_PRED = "http://geneontology.org/lego/modelstate"
 _TIMING = bool(os.environ.get("GOCAM_TIMING"))
 
 
@@ -149,24 +150,25 @@ def build(versions: list[Version], raw_dir: Path, db_path: Path = C.DUCKDB_PATH)
     """)
 
     # ---- models table (title derived from the latest version's dc:title) ----
+    # title and current state both come from the latest version's annotations.
     _ex(con, "models", f"""
         CREATE TABLE models AS
-        WITH titles AS (
-            SELECT v.model_id,
-                   regexp_replace(t.object, '(^")|("$)', '', 'g') AS title,
-                   row_number() OVER (PARTITION BY v.model_id ORDER BY v.ord DESC) AS rn
+        WITH latest AS (
+            SELECT v.model_id, t.predicate, regexp_replace(t.object, '(^")|("$)', '', 'g') AS val,
+                   row_number() OVER (PARTITION BY v.model_id, t.predicate ORDER BY v.ord DESC) AS rn
             FROM triples t JOIN versions v USING (version_id)
-            WHERE t.predicate = '{TITLE_PRED}'
+            WHERE t.predicate IN ('{TITLE_PRED}', '{STATE_PRED}')
               AND t.subject = '{MODEL_IRI}' || v.model_id
         )
         SELECT vv.model_id,
-               max(ti.title) AS title,
+               max(CASE WHEN l.predicate = '{TITLE_PRED}' THEN l.val END) AS title,
+               max(CASE WHEN l.predicate = '{STATE_PRED}' THEN l.val END) AS state,
                count(*) AS n_versions,
                min(vv.commit_time) AS first_seen,
                max(vv.commit_time) AS last_seen,
                max(vv.n_triples) AS max_triples
         FROM versions vv
-        LEFT JOIN titles ti ON ti.model_id = vv.model_id AND ti.rn = 1
+        LEFT JOIN latest l ON l.model_id = vv.model_id AND l.rn = 1
         GROUP BY vv.model_id;
     """)
 

@@ -10,3 +10,7 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .DS_Store
+
+# generated WASM site (built in CI from the committed notebook)
+/docs/
+__marimo__/

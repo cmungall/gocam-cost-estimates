@@ -24,10 +24,18 @@ The minerva→GitHub bot commits every ~5 minutes, so each commit touching
 ```bash
 uv sync
 just build      # full data build (clone + fetch + extract + DuckDB + export)
-just stats      # headline cohort summary
-just notebook   # marimo: curation-time summary + edit-pattern gallery
+just stats      # headline cohort summary (production models only)
+just notebook   # edit/run the interactive notebook locally
+just docs       # publish the interactive WASM site to docs/
 ```
 
 The big clone (`vendor/`) and full `data/triples.duckdb` are gitignored and
-rebuildable; small derived parquet under `data/` is committed so the notebook
-runs out of the box.
+rebuildable; small derived parquet under `data/`, the generated notebook, and
+`docs/` are committed so the site works out of the box.
+
+## Scope
+
+Counts cover **production** native GO-CAMs edited in the last 2 years (~3,325;
+~2,100 with real multi-edit curation — matching
+[go-cam-browser](https://go-cam-browser.geneontology.org/)). Gene-centric/import
+models and non-production states (deleted/development/test) are excluded.

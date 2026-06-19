@@ -24,8 +24,12 @@ def classify(df: pd.DataFrame) -> pd.Series:
 
 
 def representatives(df: pd.DataFrame, per_pattern: int = 2) -> pd.DataFrame:
-    """Pick a couple of clear, substantial exemplars per pattern for the gallery."""
-    d = df.copy()
+    """Pick a couple of clear, substantial exemplars per pattern for the gallery.
+
+    Production models only, excluding 'Copy of ...' scratch copies.
+    """
+    d = df[(df.state == "production")
+           & ~df.title.fillna("").str.match(r"(?i)^\s*copy of")].copy()
     d["pattern"] = classify(d)
     picks = []
     for pat, g in d.groupby("pattern"):

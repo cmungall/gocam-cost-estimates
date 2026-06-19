@@ -42,37 +42,45 @@ def build(concurrency: int = 32, skip_fetch: bool = False) -> None:
 
 @app.command()
 def export() -> None:
-    """Write the small committed artifacts the notebook reads."""
+    """Write the small committed parquet that `publish` embeds into the notebook."""
     C.DATA.mkdir(parents=True, exist_ok=True)
     df = metrics.compute()
     df.to_parquet(C.DATA / "curation_metrics.parquet", index=False)
 
     con = duckdb.connect(str(C.DUCKDB_PATH), read_only=True)
     con.execute(f"COPY (SELECT * FROM versions) TO '{(C.DATA/'versions.parquet').as_posix()}' (FORMAT parquet);")
+    con.close()
 
     reps = patterns.representatives(df)
-    reps.to_parquet(C.DATA / "examples.parquet", index=False)
-    ids = "', '".join(reps.model_id.tolist())
-    con.execute(f"""
-        COPY (SELECT t.*, v.model_id, v.commit_time, v.ord
-              FROM triples t JOIN versions v USING(version_id)
-              WHERE v.model_id IN ('{ids}'))
-        TO '{(C.DATA/'example_triples.parquet').as_posix()}' (FORMAT parquet);
-    """)
-    con.close()
     typer.echo(f"exported derived artifacts to {C.DATA}")
-    typer.echo("\nrepresentative examples:")
+    typer.echo("\nrepresentative production examples:")
     for _, r in reps.iterrows():
         typer.echo(f"  [{r.pattern:13}] {r.model_id}  saves={r.n_saves} "
                    f"churn={r.total_churn} active60m={r.active_min_60m}min  {str(r.title)[:48]}")
 
 
 @app.command()
+def publish() -> None:
+    """Regenerate the self-contained interactive marimo notebook (embeds data)."""
+    from . import publish as pub
+    out = pub.generate()
+    typer.echo(f"wrote interactive notebook -> {out}")
+
+
+@app.command()
 def docs() -> None:
-    """Generate the static HTML report under docs/ (for GitHub Pages)."""
-    from . import report
-    out = report.generate()
-    typer.echo(f"wrote static docs to {out}")
+    """Publish the interactive notebook to docs/ as a WASM site (GitHub Pages)."""
+    import subprocess
+    from . import publish as pub
+    nb = pub.generate()
+    (C.ROOT / "docs").mkdir(exist_ok=True)
+    subprocess.run(
+        ["uv", "run", "marimo", "export", "html-wasm", str(nb),
+         "-o", str(C.ROOT / "docs"), "--mode", "run", "--show-code", "-f"],
+        check=True, cwd=C.ROOT,
+    )
+    (C.ROOT / "docs" / ".nojekyll").write_text("")
+    typer.echo(f"published interactive docs -> {C.ROOT / 'docs'}")
 
 
 @app.command()
