@@ -87,9 +87,9 @@ def cohort_summary(df: pd.DataFrame) -> pd.DataFrame:
     """
     prod = df[df.state == "production"]
     cohorts = {
-        "production": prod,
-        "production_multi_save_>=2": prod[prod.n_saves >= 2],
+        "production_active_>=2saves": prod[prod.n_saves >= 2],   # headline (≈ go-cam-browser)
         "production_substantial_>=5": prod[prod.n_saves >= 5],
+        "production_all_touched": prod,                          # incl. single in-window edit
     }
     metrics = ["n_saves", "n_active_days", "calendar_span_days",
                "active_min_60m", "adj_min_60m", "sessions_60m",

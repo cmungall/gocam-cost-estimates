@@ -81,9 +81,16 @@ def _(mo):
         How much **curation effort** goes into GO-CAM models, derived from
         `geneontology/noctua-models` git history. The minerva→GitHub bot commits
         every **~5 minutes**, so each commit touching a model is a **save event at
-        ~5-min resolution**. We keep only **production** native GO-CAMs (last 2
-        years), group save events into sessions, and measure **edit size** as
-        triples added/removed per save (from a DuckDB triple-store-over-time).
+        ~5-min resolution**. We measure **edit size** as triples added/removed per
+        save (from a DuckDB triple-store-over-time).
+
+        Scope: **production** native GO-CAMs. Of ~3,325 production models touched
+        in the last 2 years, the headline cohort is the **~2,100 with ≥2 in-window
+        saves** — these are the ones whose hands-on time we can actually measure
+        (≈ the [go-cam-browser](https://go-cam-browser.geneontology.org/) count).
+        The rest changed in only one ~5-min commit window (built in a single
+        operation, or curated mostly before the 2-year window), so their time
+        can't be measured.
 
         *Active editing time is a lower bound — it excludes literature reading and
         planning done outside Noctua.*
@@ -105,11 +112,22 @@ def _(MODELS, mo, pd):
             "triples (median)": round(d.max_triples.median(), 1),
         }
     summary = pd.DataFrame({
-        "all production": _summ(MODELS),
-        "≥2 saves (real curation)": _summ(MODELS[MODELS.n_saves >= 2]),
+        "actively curated (≥2 saves)": _summ(MODELS[MODELS.n_saves >= 2]),
         "substantial (≥5 saves)": _summ(MODELS[MODELS.n_saves >= 5]),
+        "all production touched (incl. single-edit)": _summ(MODELS),
     }).T
-    mo.vstack([mo.md("## How long does a GO-CAM take to curate?"), mo.ui.table(summary, selection=None)])
+    n2 = int((MODELS.n_saves >= 2).sum())
+    n1 = int((MODELS.n_saves == 1).sum())
+    mo.vstack([
+        mo.md("## How long does a GO-CAM take to curate?"),
+        mo.ui.table(summary, selection=None),
+        mo.md(
+            f"*Headline = the **{n2:,}** production models with ≥2 in-window saves. "
+            f"The other **{n1:,}** changed in a single ~5-min commit window "
+            f"(single-operation build, or curated before the window) — real models, "
+            f"but their hands-on time is not measurable here, so they sit at 0 min.*"
+        ),
+    ])
     return
 
 
